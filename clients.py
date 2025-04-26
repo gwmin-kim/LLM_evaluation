@@ -44,16 +44,16 @@ class PDFRAG:
         self.embedding = embedding
         self.llm = llm
 
-    def get_similar_docs(self, query, k):
+    def get_similar_docs(self, query, k=3):
         return self.vectorstore.similarity_search(query, k)
 
-    def create_retriever(self):
-        return self.vectorstore.as_retriever()
+    def retriever(self, k=3, score_threshold=0.3):
+        return self.vectorstore.as_retriever(search_type="similarity_score_threshold", search_kwargs={"k": k, "score_threshold": score_threshold})
 
     def format_docs(self, docs):
         return '\n'.join(doc.page_content for doc in docs)
 
-    def create_chain(self, query, k):
+    def create_chain(self, k=3, score_threshold=0.3):
         # 프롬프트 생성(Create Prompt)
         
         prompt = PromptTemplate.from_template(
@@ -73,7 +73,7 @@ class PDFRAG:
         # 체인(Chain) 생성
         chain = (
             {
-                "context": self.vectorstore.similarity_search(query, k),
+                "context": self.retriever(k=k, score_threshold=score_threshold) | self.format_docs,
                 "question": RunnablePassthrough(),
             }
             | prompt
